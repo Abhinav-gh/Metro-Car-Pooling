@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package com.metrocarpool.events;
+
+//// Optionally define the Java package
+//option java_package = "com.metrocarpool.events";
+//option java_multiple_files = true;
+
+// The Kafka event definition
+message DriverLocationEvent {
+  int64 driverId = 1;
+  string oldStation = 2;
+  string nextStation = 3;
+  int32 timeToNextStation = 4;
+  int32 availableSeats = 5;
+  string finalDestination = 6;
+}
