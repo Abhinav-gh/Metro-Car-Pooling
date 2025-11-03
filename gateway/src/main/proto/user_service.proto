@@ -8,7 +8,7 @@ option java_multiple_files = true;
 option java_package = "com.metrocarpool.user.proto";
 option java_outer_classname = "UserProto";
 
-service DriverService {
+service UserService {
   rpc UserSignUpRequest (UserSignUp) returns (SignUpOrLoginResponse);
   rpc UserLoginRequest (UserLogin) returns (SignUpOrLoginResponse);
 }

@@ -8,7 +8,7 @@ option java_multiple_files = true;
 option java_package = "com.metrocarpool.rider.proto";
 option java_outer_classname = "RiderProto";
 
-service DriverService {
+service RiderService {
   rpc PostRiderInfo (PostRider) returns (RiderStatusResponse);
 }
 

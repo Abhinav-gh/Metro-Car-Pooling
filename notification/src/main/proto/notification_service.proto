@@ -8,7 +8,7 @@ option java_multiple_files = true;
 option java_package = "com.metrocarpool.notification.proto";
 option java_outer_classname = "NotificationProto";
 
-service DriverService {
+service NotificationService {
   rpc MatchNotificationInitiationPost (NotificationInitiation) returns (stream RiderDriverMatch);
   rpc DriverRideCompletionNotificationInitiationPost (NotificationInitiation)
       returns (stream DriverRideCompletion);
