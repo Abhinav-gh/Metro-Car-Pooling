@@ -3,14 +3,11 @@ package com.metrocarpool.notification.service;
 import com.metrocarpool.notification.proto.DriverRideCompletion;
 import com.metrocarpool.notification.proto.RiderDriverMatch;
 import com.metrocarpool.notification.proto.RiderRideCompletion;
-import lombok.Builder;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 import org.springframework.kafka.support.Acknowledgment;
-
-import java.time.Instant;
 
 @Service
 public class NotificationService {
