@@ -1,0 +1,3 @@
+1. Whichever microservices requires Cache, they should have a sidecar redis cache container inside the k8 pod. 
+2. CSV files not yet inside cache. use redis docker volume to do this.
+3. 
