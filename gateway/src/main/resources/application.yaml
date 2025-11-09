@@ -1,3 +1,9 @@
 spring:
   application:
     name: gateway
+server:
+  port: 8081
+eureka:
+  client:
+    service-url:
+      defaultzone: http://localhost:8761/eureka

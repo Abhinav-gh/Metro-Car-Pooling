@@ -22,3 +22,9 @@ spring:
 kafka:
   topics:
     rider-driver-match: "rider-driver-match"
+server:
+  port: 8081
+eureka:
+  client:
+    service-url:
+      defaultzone: http://localhost:8761/eureka

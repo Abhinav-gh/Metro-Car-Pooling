@@ -24,3 +24,9 @@ kafka:
     rider-ride-completion: "rider-ride-completion"
     driver-ride-completion: "driver-ride-completion"
     driver-location-rider: "driver-location-rider"
+server:
+  port: 8081
+eureka:
+  client:
+    service-url:
+      defaultzone: http://localhost:8761/eureka
