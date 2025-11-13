@@ -28,7 +28,6 @@
         <module>rider</module>
         <module>trip</module>
         <module>user</module>
-        <module>db</module>
     </modules>
 
     <properties>
