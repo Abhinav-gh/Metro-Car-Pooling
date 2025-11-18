@@ -41,5 +41,5 @@ eureka:
     metadata-map:
       grpc.port: 9091                   # ✅ Advertise gRPC port for service discovery
 logstash:
-  host: localhost
+  host: logstash
   port: 5044

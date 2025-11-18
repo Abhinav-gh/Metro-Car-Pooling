@@ -1,13 +1,17 @@
+version: "3.8"
+
 services:
-  rider-service:
+  trip-service:
     build:
       context: ..
-      dockerfile: rider/Dockerfile
-    container_name: rider-service
+      dockerfile: trip/Dockerfile
+    container_name: trip-service
     ports:
-      - "8086:8082"
-      - "9093:9093"
+      - "8087:8083"
+      - "9094:9094"
     environment:
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       EUREKA_URL: http://registry:8761/eureka
     networks:
