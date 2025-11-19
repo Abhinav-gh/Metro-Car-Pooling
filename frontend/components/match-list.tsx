@@ -49,14 +49,14 @@ export function MatchList({ matches, role }: MatchListProps) {
 
           <div className="space-y-3 mb-6">
             <div className="flex items-center gap-3 text-foreground">
-              <span className="text-primary flex-shrink-0">📍</span>
+              <span className="text-primary shrink-0">📍</span>
               <div>
                 <p className="text-sm text-muted-foreground">From</p>
                 <p className="font-medium">{match.from}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 text-foreground">
-              <span className="text-accent flex-shrink-0">📍</span>
+              <span className="text-accent shrink-0">📍</span>
               <div>
                 <p className="text-sm text-muted-foreground">To</p>
                 <p className="font-medium">{match.to}</p>

@@ -49,7 +49,7 @@ export function NotificationCenter({ role }: NotificationCenterProps) {
         <div className="space-y-2">
           {notifications.map((notif, i) => (
             <div key={i} className="p-3 bg-background rounded-lg border border-border text-sm flex items-start gap-3">
-              <span className="text-accent flex-shrink-0 mt-0.5">✓</span>
+              <span className="text-accent shrink-0 mt-0.5">✓</span>
               <div>
                 <p className="font-medium">{notif.title || 'New Match!'}</p>
                 <p className="text-muted-foreground text-xs mt-1">{notif.message || 'A new ride match is available'}</p>

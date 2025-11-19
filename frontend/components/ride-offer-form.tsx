@@ -40,7 +40,7 @@ export function RideOfferForm({ onSubmit }: RideOfferFormProps) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <label className="text-sm font-medium text-foreground block mb-2 flex items-center gap-2">
+          <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
             📍
             Departure
           </label>
@@ -54,7 +54,7 @@ export function RideOfferForm({ onSubmit }: RideOfferFormProps) {
           />
         </div>
         <div>
-          <label className="text-sm font-medium text-foreground block mb-2 flex items-center gap-2">
+          <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
             📍
             Destination
           </label>
@@ -71,7 +71,7 @@ export function RideOfferForm({ onSubmit }: RideOfferFormProps) {
 
       <div className="grid md:grid-cols-3 gap-4">
         <div>
-          <label className="text-sm font-medium text-foreground block mb-2 flex items-center gap-2">
+          <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
             🕐
             Departure Time
           </label>
@@ -84,7 +84,7 @@ export function RideOfferForm({ onSubmit }: RideOfferFormProps) {
           />
         </div>
         <div>
-          <label className="text-sm font-medium text-foreground block mb-2 flex items-center gap-2">
+          <label className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
             👥
             Available Seats
           </label>
