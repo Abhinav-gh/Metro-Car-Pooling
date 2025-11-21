@@ -42,9 +42,12 @@ public class UserController {
     public SignUpOrLoginResponseDTO addRider(@RequestBody RiderSignUpRequestDTO riderSignUpRequestDTO) {
         log.info("Reached RiderController.addRider");
         log.info("Rider signup: Username = {}", riderSignUpRequestDTO.getUsername());
-        return SignUpOrLoginResponseDTO.builder()
-                .STATUS_CODE(userGrpcClient.RiderSignUpReq(riderSignUpRequestDTO).getSTATUSCODE())
+        SignUpOrLoginResponse signUpOrLoginResponse = userGrpcClient.RiderSignUpReq(riderSignUpRequestDTO);
+        int code = signUpOrLoginResponse.getSTATUSCODE();
+        SignUpOrLoginResponseDTO signUpOrLoginResponseDTO = SignUpOrLoginResponseDTO.builder()
+                .STATUS_CODE(code)
                 .build();
+        return signUpOrLoginResponseDTO;
     }
 
     @PostMapping("/login-driver")

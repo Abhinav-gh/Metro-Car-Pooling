@@ -4,5 +4,5 @@ import lombok.Builder;
 
 @Builder
 public class SignUpOrLoginResponseDTO {
-    int STATUS_CODE;
+    private int STATUS_CODE;
 }
