@@ -14,7 +14,7 @@ export function RiderNav({ onLogout }: RiderNavProps) {
           <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center text-xl">
             🚗
           </div>
-          <h1 className="text-lg font-bold text-accent">OneRide Rider</h1>
+          <h1 className="text-lg font-bold text-accent">FreeRide Rider</h1>
         </div>
         <Button
           variant="outline"
