@@ -12,7 +12,7 @@ export default function Home() {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg">
               🚗
             </div>
-            <h1 className="text-xl font-bold text-primary">OneRide</h1>
+            <h1 className="text-xl font-bold text-primary">FreeRide</h1>
           </div>
           <nav className="flex items-center gap-4">
             <Link href="/auth" className="text-foreground hover:text-primary transition-colors">
@@ -74,7 +74,7 @@ export default function Home() {
 
         {/* Features Section */}
         <div className="mt-20 pt-16 border-t border-border">
-          <h2 className="text-3xl font-bold text-center mb-12">Why Choose OneRide?</h2>
+          <h2 className="text-3xl font-bold text-center mb-12">Why Choose FreeRide?</h2>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center space-y-3">
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto text-xl">
@@ -104,7 +104,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-border bg-card/50 mt-20">
         <div className="max-w-6xl mx-auto px-4 py-8 text-center text-muted-foreground text-sm">
-          <p>&copy; 2025 OneRide. Made for sustainable commuting.</p>
+          <p>&copy; 2025 FreeRide. Made for sustainable commuting.</p>
         </div>
       </footer>
     </div>

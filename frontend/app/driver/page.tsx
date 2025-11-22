@@ -5,14 +5,16 @@ import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { DriverNav } from '@/components/driver-nav'
 import { RideOfferForm } from '@/components/ride-offer-form'
-import { NotificationCenter } from '@/components/notification-center'
 import { apiRequest } from '@/lib/api-config'
+
+type TabType = 'post-request' | 'notifications'
 
 export default function DriverPage() {
   const router = useRouter()
   const [authenticated, setAuthenticated] = useState(false)
-  const [showNotifications, setShowNotifications] = useState(false)
+  const [activeTab, setActiveTab] = useState<TabType>('post-request')
   const [loading, setLoading] = useState(false)
+  const [disableRequestTab, setDisableRequestTab] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('authToken')
@@ -50,8 +52,10 @@ export default function DriverPage() {
         body: JSON.stringify(payload),
       })
       console.log(response)
-      if (response && response.status) {
+      if (response && response.status === 200) {
         alert('🎉 Ride offer posted successfully!')
+        setActiveTab('notifications')
+        setDisableRequestTab(true)
       } else {
         alert('❌ Failed to post ride offer. Please try again.')
       }
@@ -79,32 +83,60 @@ export default function DriverPage() {
       <DriverNav onLogout={handleLogout} />
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-primary">Driver Dashboard</h1>
+        <h1 className="text-3xl font-bold text-primary mb-8">Driver Dashboard</h1>
+
+        {/* Tab Navigation */}
+        <div className="flex gap-2 mb-6 border-b border-border">
           <button
-            onClick={() => setShowNotifications(!showNotifications)}
-            className="relative p-2 rounded-lg hover:bg-muted transition-colors text-xl"
+            onClick={() => !disableRequestTab && setActiveTab('post-request')}
+            disabled={disableRequestTab}
+            className={`px-6 py-3 font-medium transition-colors ${
+              activeTab === 'post-request'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            } ${disableRequestTab ? 'opacity-50 cursor-not-allowed' : ''}`}
+
           >
-            🔔
-            <span className="absolute top-1 right-1 w-3 h-3 bg-destructive rounded-full"></span>
+            Post Driver Request
+          </button>
+          <button
+            onClick={() => setActiveTab('notifications')}
+            className={`px-6 py-3 font-medium transition-colors ${
+              activeTab === 'notifications'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Notifications
           </button>
         </div>
 
-        {showNotifications && <NotificationCenter role="driver" />}
-
-        {/* Content */}
+        {/* Tab Content */}
         <div className="max-w-3xl mx-auto">
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-6">Post a Ride Offer</h2>
-            {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin text-4xl mb-4">🚗</div>
-                <p className="text-muted-foreground">Posting your ride offer...</p>
+          {activeTab === 'post-request' && (
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-6">Post Driver Request</h2>
+              {loading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin text-4xl mb-4">🚗</div>
+                  <p className="text-muted-foreground">Posting your driver ride request...</p>
+                </div>
+              ) : (
+                <RideOfferForm onSubmit={handleSubmitOffer} />
+              )}
+            </Card>
+          )}
+
+          {activeTab === 'notifications' && (
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold mb-6">Ride Offer Notifications</h2>
+              <div className="text-center py-12 text-muted-foreground">
+                <div className="text-4xl mb-4">🔔</div>
+                <p>Notifications will appear here</p>
+                <p className="text-sm mt-2">Check back later for ride offer updates</p>
               </div>
-            ) : (
-              <RideOfferForm onSubmit={handleSubmitOffer} />
-            )}
-          </Card>
+            </Card>
+          )}
         </div>
       </main>
     </div>

@@ -95,7 +95,7 @@ export function RideOfferForm({ onSubmit }: RideOfferFormProps) {
               <span className="text-2xl">🗺️</span>
               Your Route Map
             </p>
-            <div className="bg-gradient-to-br from-primary/5 via-background to-primary/10 rounded-xl p-6 border-2 border-primary/20 shadow-lg">
+            <div className="bg-linear-to-br from-primary/5 via-background to-primary/10 rounded-xl p-6 border-2 border-primary/20 shadow-lg">
               <div className="space-y-1">
                 {routeStations.map((station, index) => (
                   <div key={index} className="relative">
@@ -118,7 +118,7 @@ export function RideOfferForm({ onSubmit }: RideOfferFormProps) {
                         
                         {/* Connecting Line */}
                         {index < routeStations.length - 1 && (
-                          <div className="w-1 h-12 bg-gradient-to-b from-primary via-primary/70 to-primary/50 relative">
+                          <div className="w-1 h-12 bg-linear-to-b from-primary via-primary/70 to-primary/50 relative">
                             <div className="absolute inset-0 bg-primary/30 animate-pulse"></div>
                           </div>
                         )}
@@ -164,18 +164,6 @@ export function RideOfferForm({ onSubmit }: RideOfferFormProps) {
                     </div>
                   </div>
                 ))}
-              </div>
-
-              {/* Route Summary */}
-              <div className="mt-6 pt-4 border-t border-primary/20">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Total Stops:</span>
-                  <span className="font-bold text-primary">{routeStations.length}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm mt-2">
-                  <span className="text-muted-foreground">Route Distance:</span>
-                  <span className="font-bold text-primary">~{(routeStations.length - 1) * 5} km</span>
-                </div>
               </div>
             </div>
           </div>

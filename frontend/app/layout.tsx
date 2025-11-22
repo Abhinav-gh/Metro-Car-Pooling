@@ -6,7 +6,7 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'OneRide - Carpool with Confidence',
+  title: 'FreeRide - Carpool with Confidence',
   description: 'Simple and affordable carpooling platform connecting drivers and riders',
   generator: 'v0.app',
 }

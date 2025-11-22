@@ -148,7 +148,7 @@ export default function AuthPage() {
           <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center mx-auto mb-3 text-2xl">
             🚗
           </div>
-          <h1 className="text-2xl font-bold text-primary">OneRide</h1>
+          <h1 className="text-2xl font-bold text-primary">FreeRide</h1>
         </div>
 
         <Card className="p-8 shadow-lg">
