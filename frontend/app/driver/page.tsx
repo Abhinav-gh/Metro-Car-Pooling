@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { DriverNav } from '@/components/driver-nav'
 import { RideOfferForm } from '@/components/ride-offer-form'
+import { DriverNotificationCenter } from '@/components/driver-notification-center'
 import { apiRequest } from '@/lib/api-config'
 
 type TabType = 'post-request' | 'notifications'
@@ -14,7 +15,7 @@ export default function DriverPage() {
   const [authenticated, setAuthenticated] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>('post-request')
   const [loading, setLoading] = useState(false)
-  const [disableRequestTab, setDisableRequestTab] = useState(false);
+  const [disableRequestTab, setDisableRequestTab] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem('authToken')
@@ -95,7 +96,6 @@ export default function DriverPage() {
                 ? 'text-primary border-b-2 border-primary'
                 : 'text-muted-foreground hover:text-foreground'
             } ${disableRequestTab ? 'opacity-50 cursor-not-allowed' : ''}`}
-
           >
             Post Driver Request
           </button>
@@ -128,14 +128,9 @@ export default function DriverPage() {
           )}
 
           {activeTab === 'notifications' && (
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-6">Ride Offer Notifications</h2>
-              <div className="text-center py-12 text-muted-foreground">
-                <div className="text-4xl mb-4">🔔</div>
-                <p>Notifications will appear here</p>
-                <p className="text-sm mt-2">Check back later for ride offer updates</p>
-              </div>
-            </Card>
+            <div>
+              <DriverNotificationCenter />
+            </div>
           )}
         </div>
       </main>
