@@ -6,11 +6,14 @@ import com.metrocarpool.rider.proto.RiderServiceGrpc;
 import com.metrocarpool.rider.proto.RiderStatusResponse;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.stereotype.Component;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Component
 @Slf4j
@@ -19,24 +22,52 @@ public class RiderGrpcClient {
     @Autowired
     private DiscoveryClient discoveryClient;
 
+    // Keep a reusable channel + stub
+    private final AtomicReference<ManagedChannel> channelRef = new AtomicReference<>(null);
+    private volatile RiderServiceGrpc.RiderServiceBlockingStub stub = null;
+    private volatile String currentTarget = null; // "host:port" of current channel
+
     public RiderGrpcClient() {
         log.info("Initialized RiderGrpcClient");
     }
 
-    private ManagedChannel createChannel(ServiceInstance instance) {
-        String host = instance.getHost();
-        int port = getGrpcPort(instance);
+    private synchronized void ensureChannelFor(String host, int port) {
+        String target = host + ":" + port;
+        ManagedChannel ch = channelRef.get();
 
-        log.info("Creating GRPC channel to rider-service at {}:{}", host, port);
+        // if channel exists and target same and not shutdown, reuse it
+        if (ch != null && target.equals(currentTarget) && !ch.isShutdown() && !ch.isTerminated()) {
+            return;
+        }
 
-        return ManagedChannelBuilder
-                .forAddress(host, port)
+        // otherwise create new channel and stub, shutting down previous
+        if (ch != null) {
+            try {
+                log.info("Shutting down previous gRPC channel to {}", currentTarget);
+                ch.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                log.warn("Interrupted while shutting down previous gRPC channel", e);
+                Thread.currentThread().interrupt();
+            } finally {
+                channelRef.set(null);
+            }
+        }
+
+        log.error("Creating GRPC channel to rider-service at {}:{}", host, port);
+        ManagedChannel newChannel = ManagedChannelBuilder.forAddress(host, port)
                 .usePlaintext()
                 .build();
+
+        channelRef.set(newChannel);
+        this.stub = RiderServiceGrpc.newBlockingStub(newChannel);
+        this.currentTarget = target;
     }
 
-    private RiderServiceGrpc.RiderServiceBlockingStub getStub(ManagedChannel channel) {
-        return RiderServiceGrpc.newBlockingStub(channel);
+    private RiderServiceGrpc.RiderServiceBlockingStub getStubForInstance(ServiceInstance instance) {
+        String host = instance.getHost();
+        int port = getGrpcPort(instance);
+        ensureChannelFor(host, port);
+        return this.stub;
     }
 
     public RiderStatusResponse postRiderInfo(Long riderId, String pickUp, String dest, Timestamp arrivalTime) {
@@ -47,10 +78,13 @@ public class RiderGrpcClient {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Rider service not found in Eureka"));
 
-        ManagedChannel channel = createChannel(instance);
+        // debug info from Eureka
+        log.error("Eureka metadata = {}", instance.getMetadata());
+        log.error("Eureka host = {}", instance.getHost());
+        log.error("Eureka grpc.port = {}", instance.getMetadata().get("grpc.port"));
 
         try {
-            RiderServiceGrpc.RiderServiceBlockingStub stub = getStub(channel);
+            RiderServiceGrpc.RiderServiceBlockingStub stub = getStubForInstance(instance);
 
             // Build GRPC message
             PostRider postRider = PostRider.newBuilder()
@@ -66,21 +100,31 @@ public class RiderGrpcClient {
 
         } catch (Exception e) {
             log.error("Error while posting rider info to GRPC", e);
-
             return RiderStatusResponse.newBuilder()
                     .setStatus(false)
                     .build();
 
-        } finally {
-            channel.shutdown();
         }
     }
 
     private int getGrpcPort(ServiceInstance instance) {
         log.info("Retrieving GRPC port from Eureka metadata");
-
         String grpcPort = instance.getMetadata().get("grpc.port");
-
         return grpcPort != null ? Integer.parseInt(grpcPort) : 9090;
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        ManagedChannel ch = channelRef.get();
+        if (ch != null && !ch.isShutdown()) {
+            log.info("Shutting down gRPC channel to {}", currentTarget);
+            ch.shutdown();
+            try {
+                ch.awaitTermination(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                log.warn("Interrupted while waiting channel termination", e);
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 }

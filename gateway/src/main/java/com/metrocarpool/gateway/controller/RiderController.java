@@ -1,31 +1,29 @@
 package com.metrocarpool.gateway.controller;
 
 import com.metrocarpool.gateway.client.RiderGrpcClient;
-import com.metrocarpool.gateway.dto.PostRiderDTO;
 import com.metrocarpool.gateway.dto.RiderStatusResponseDTO;
-import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import com.google.protobuf.Timestamp;
 import java.time.Instant;
 
-@Builder
 @RestController
 @RequestMapping("/api/rider")
 @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 @Slf4j
 public class RiderController {
+
     @Autowired
     private RiderGrpcClient riderGrpcClient;
 
-    // Define a request DTO specifically for the JSON input
+    // Simple request DTO for JSON body
     @lombok.Data
     static class RiderRequest {
         private Long riderId;
         private String pickUpStation;
         private String destinationPlace;
-        private String arrivalTime; // Accepts ISO String
+        private String arrivalTime; // ISO 8601 string expected
     }
 
     @PostMapping(value = "/rider-info")
@@ -33,35 +31,26 @@ public class RiderController {
         log.info("RiderController.postRiderInformation.");
         log.info("Received request: {}", request);
 
-        // We keep ISO in PostRiderDTO, because frontend sends ISO
-        PostRiderDTO postRiderDTO = new PostRiderDTO();
-        postRiderDTO.setRiderId(request.getRiderId());
-        postRiderDTO.setPickUpStation(request.getPickUpStation());
-        postRiderDTO.setDestinationPlace(request.getDestinationPlace());
-        postRiderDTO.setArrivalTime(request.getArrivalTime()); // keep ISO string
-
-        // Convert ISO → Protobuf Timestamp ONLY for GRPC
+        // Convert ISO -> protobuf Timestamp for gRPC call
         Timestamp protoTimestamp = convertIsoToProtoTimestamp(request.getArrivalTime());
 
-        // Send to gRPC client (update RiderGrpcClient to accept proto timestamp separately)
+        // Call gateway client (returns protobuf response mapped to POJO)
         var response = riderGrpcClient.postRiderInfo(
-                postRiderDTO.getRiderId(),
-                postRiderDTO.getPickUpStation(),
-                postRiderDTO.getDestinationPlace(),
+                request.getRiderId(),
+                request.getPickUpStation(),
+                request.getDestinationPlace(),
                 protoTimestamp
         );
 
+        // Build and return HTTP response DTO
         return RiderStatusResponseDTO.builder()
-                .STATUSSSSS(response.getStatus())
+                .STATUSSSSS(response.getStatus())   // Make sure RiderStatusResponseDTO has 'status' field
                 .build();
     }
 
     private Timestamp convertIsoToProtoTimestamp(String isoString) {
         try {
-            // Parse ISO 8601 string to Instant
             Instant instant = Instant.parse(isoString);
-            
-            // Convert to protobuf Timestamp
             return Timestamp.newBuilder()
                     .setSeconds(instant.getEpochSecond())
                     .setNanos(instant.getNano())

@@ -26,6 +26,9 @@ public class UserGrpcClient {
     private ManagedChannel createChannel(ServiceInstance instance) {
         String host = instance.getHost();
         int port = getGrpcPort(instance);
+
+        log.info("💥 Creating GRPC channel → {}:{}", host, port);
+
         return ManagedChannelBuilder.forAddress(host, port)
                 .usePlaintext()
                 .build();
