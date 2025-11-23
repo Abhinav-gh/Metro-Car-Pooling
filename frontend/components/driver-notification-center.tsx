@@ -4,13 +4,11 @@ import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
+// Proto message structure from notification_service.proto
 interface RiderDriverMatch {
   riderId: number
   driverId: number
-  riderPickupStation: string
-  riderDestination: string
-  matchedStation: string
-  timestamp: string
+  driverArrivalTime: string // ISO timestamp string
 }
 
 export function DriverNotificationCenter() {
@@ -19,7 +17,8 @@ export function DriverNotificationCenter() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const eventSource = new EventSource('http://localhost:8080/api/notification/matches?status=true', {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+    const eventSource = new EventSource(`${API_BASE_URL}/api/notification/matches?status=true`, {
       withCredentials: true
     })
 
@@ -111,7 +110,9 @@ export function DriverNotificationCenter() {
                   <div>
                     <h3 className="font-semibold text-lg">New Rider Match!</h3>
                     <p className="text-sm text-muted-foreground">
-                      {new Date(match.timestamp).toLocaleString()}
+                      {match.driverArrivalTime 
+                        ? new Date(match.driverArrivalTime).toLocaleString() 
+                        : new Date().toLocaleString()}
                     </p>
                   </div>
                   <div className="text-2xl">🚗💨</div>
@@ -119,20 +120,20 @@ export function DriverNotificationCenter() {
 
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">📍 Pickup:</span>
-                    <span className="text-sm">{match.riderPickupStation}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">🎯 Destination:</span>
-                    <span className="text-sm">{match.riderDestination}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">🔄 Matched Station:</span>
-                    <span className="text-sm font-semibold text-primary">{match.matchedStation}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">👤 Rider ID:</span>
                     <span className="text-sm">#{match.riderId}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">🚗 Driver ID:</span>
+                    <span className="text-sm">#{match.driverId}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">⏰ Driver Arrival Time:</span>
+                    <span className="text-sm font-semibold text-primary">
+                      {match.driverArrivalTime 
+                        ? new Date(match.driverArrivalTime).toLocaleString() 
+                        : 'Not specified'}
+                    </span>
                   </div>
                 </div>
 

@@ -3,15 +3,16 @@
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
+// Proto message structure from SSE
 interface Match {
-  id: string
-  name: string
-  from: string
-  to: string
-  time: string
-  seats?: number
-  price?: number
-  rating?: number
+  matchId?: string // Generated on frontend
+  riderId: number
+  driverId: number
+  driverArrivalTime?: string
+  driverLocation?: {
+    nextStation?: string
+    timeToNextStation?: number
+  }
 }
 
 interface MatchListProps {
@@ -36,47 +37,65 @@ export function MatchList({ matches, role }: MatchListProps) {
 
   return (
     <div className="grid gap-4">
-      {matches.map(match => (
-        <Card key={match.id} className="p-6 hover:shadow-lg transition-shadow">
+      {matches.map((match, index) => (
+        <Card key={match.matchId || `${match.riderId}-${match.driverId}-${index}`} className="p-6 hover:shadow-lg transition-shadow">
           <div className="flex justify-between items-start mb-4">
-            <h3 className="text-lg font-semibold">{match.name}</h3>
-            {match.rating && (
-              <div className="text-sm">
-                ⭐ {match.rating}
-              </div>
-            )}
+            <h3 className="text-lg font-semibold">
+              {role === 'rider' ? `Driver #${match.driverId}` : `Rider #${match.riderId}`}
+            </h3>
+            <div className="text-sm text-muted-foreground">
+              {match.driverArrivalTime 
+                ? new Date(match.driverArrivalTime).toLocaleString() 
+                : 'Time TBD'}
+            </div>
           </div>
 
           <div className="space-y-3 mb-6">
             <div className="flex items-center gap-3 text-foreground">
-              <span className="text-primary shrink-0">📍</span>
+              <span className="text-primary shrink-0">👤</span>
               <div>
-                <p className="text-sm text-muted-foreground">From</p>
-                <p className="font-medium">{match.from}</p>
+                <p className="text-sm text-muted-foreground">
+                  {role === 'rider' ? 'Driver ID' : 'Rider ID'}
+                </p>
+                <p className="font-medium">
+                  {role === 'rider' ? `#${match.driverId}` : `#${match.riderId}`}
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 text-foreground">
-              <span className="text-accent shrink-0">📍</span>
-              <div>
-                <p className="text-sm text-muted-foreground">To</p>
-                <p className="font-medium">{match.to}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span>🕐</span>
-              <p className="text-sm">{match.time}</p>
-            </div>
-            {match.seats && (
+            
+            {match.driverArrivalTime && (
               <div className="flex items-center gap-3">
-                <span>👥</span>
-                <p className="text-sm">{match.seats} seats available</p>
+                <span>⏰</span>
+                <div>
+                  <p className="text-sm text-muted-foreground">Arrival Time</p>
+                  <p className="font-medium text-sm">
+                    {new Date(match.driverArrivalTime).toLocaleString()}
+                  </p>
+                </div>
               </div>
             )}
-            {match.price && (
-              <div className="flex items-center gap-3">
-                <span>💵</span>
-                <p className="text-sm font-medium">${match.price} per seat</p>
-              </div>
+
+            {match.driverLocation && (
+              <>
+                {match.driverLocation.nextStation && (
+                  <div className="flex items-center gap-3">
+                    <span>📍</span>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Next Station</p>
+                      <p className="font-medium text-sm">{match.driverLocation.nextStation}</p>
+                    </div>
+                  </div>
+                )}
+                {match.driverLocation.timeToNextStation !== undefined && (
+                  <div className="flex items-center gap-3">
+                    <span>⏱️</span>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Time to Next Station</p>
+                      <p className="font-medium text-sm">{match.driverLocation.timeToNextStation} minutes</p>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

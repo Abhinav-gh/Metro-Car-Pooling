@@ -38,19 +38,26 @@ export default function RiderPage() {
   useEffect(() => {
     if (!authenticated || !riderId) return
 
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
     const eventSource = new EventSource(
-      `http://localhost:8080/api/notification/matches?status=true`,
+      `${API_BASE_URL}/api/notification/matches?status=true`,
       { withCredentials: true }
     )
 
     eventSource.onmessage = (event) => {
       try {
         const match = JSON.parse(event.data)
+        // Proto message: { riderId, driverId, driverArrivalTime }
         if (match.riderId === riderId) {
           setMatches(prev => {
-            const exists = prev.some(m => m.matchId === match.matchId)
+            // Use combination of riderId and driverId as unique identifier
+            const matchKey = `${match.riderId}-${match.driverId}`
+            const exists = prev.some(m => {
+              const existingKey = `${m.riderId}-${m.driverId}`
+              return existingKey === matchKey
+            })
             if (!exists) {
-              return [match, ...prev]
+              return [{ ...match, matchId: matchKey }, ...prev]
             }
             return prev
           })
@@ -72,19 +79,27 @@ export default function RiderPage() {
   useEffect(() => {
     if (!authenticated || !riderId) return
 
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
     const eventSource = new EventSource(
-      `http://localhost:8080/api/notification/driver-location-for-rider?status=true`,
+      `${API_BASE_URL}/api/notification/driver-location-for-rider?status=true`,
       { withCredentials: true }
     )
 
     eventSource.onmessage = (event) => {
       try {
+        // Proto message: { driverId, nextStation, timeToNextStation, riderId }
         const locationData = JSON.parse(event.data)
         if (locationData.riderId === riderId) {
           console.log('Driver location update:', locationData)
           setMatches(prev => prev.map(match => 
             match.driverId === locationData.driverId
-              ? { ...match, driverLocation: locationData }
+              ? { 
+                  ...match, 
+                  driverLocation: {
+                    nextStation: locationData.nextStation,
+                    timeToNextStation: locationData.timeToNextStation
+                  }
+                }
               : match
           ))
         }
@@ -105,17 +120,20 @@ export default function RiderPage() {
   useEffect(() => {
     if (!authenticated || !riderId) return
 
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
     const eventSource = new EventSource(
-      `http://localhost:8080/api/notification/rider-ride-completion?status=true`,
+      `${API_BASE_URL}/api/notification/rider-ride-completion?status=true`,
       { withCredentials: true }
     )
 
     eventSource.onmessage = (event) => {
       try {
+        // Proto message: { riderId, completionMessage }
         const completion = JSON.parse(event.data)
         if (completion.riderId === riderId) {
           console.log('Ride completed:', completion)
-          setMatches(prev => prev.filter(m => m.matchId !== completion.matchId))
+          // Remove all matches for this rider when ride is completed
+          setMatches(prev => prev.filter(m => m.riderId !== completion.riderId))
         }
       } catch (error) {
         console.error('Error processing completion notification:', error)
