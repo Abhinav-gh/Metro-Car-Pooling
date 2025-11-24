@@ -158,8 +158,8 @@ export function RideRequestForm({ onSubmit, riderId }: RideRequestFormProps) {
           required
         >
           <option value="">Select your destination...</option>
-          {metroStationList && metroStationList.length > 0 ? (
-            metroStationList.map((station: string, index: number) => (
+          {nodes && nodes.length > 0 ? (
+            nodes.map((station: string, index: number) => (
               <option key={index} value={station}>
                 {station}
               </option>
