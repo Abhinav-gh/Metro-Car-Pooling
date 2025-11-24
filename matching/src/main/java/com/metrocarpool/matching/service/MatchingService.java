@@ -103,6 +103,82 @@ public class MatchingService {
         redisStringTemplate.opsForValue().set(redisKey, "1", 24, TimeUnit.HOURS);
     }
 
+    // -----------------------
+    // Helper methods to ensure nested caches exist
+    // -----------------------
+
+    /**
+     * Ensure top-level allMatchingCache is non-null; if null return new empty map.
+     */
+    @SuppressWarnings("unchecked")
+    private HashMap<String, HashMap<String, List<MatchingDriverCache>>> ensureAllMatchingCache() {
+        HashMap<String, HashMap<String, List<MatchingDriverCache>>> allMatchingCache =
+                (HashMap<String, HashMap<String, List<MatchingDriverCache>>>) redisDriverTemplate.opsForValue().get(MATCHING_DRIVER_CACHE_KEY);
+        if (allMatchingCache == null) {
+            allMatchingCache = new HashMap<>();
+        }
+        return allMatchingCache;
+    }
+
+    /**
+     * Get or create the station map for a station key.
+     * Returns the station map (String -> List<MatchingDriverCache>) and ensures it is put in allMatchingCache.
+     */
+    private HashMap<String, List<MatchingDriverCache>> getOrCreateStationMap(
+            HashMap<String, HashMap<String, List<MatchingDriverCache>>> allMatchingCache,
+            String stationKey) {
+        HashMap<String, List<MatchingDriverCache>> stationMap = allMatchingCache.get(stationKey);
+        if (stationMap == null) {
+            stationMap = new HashMap<>();
+            allMatchingCache.put(stationKey, stationMap);
+        }
+        return stationMap;
+    }
+
+    /**
+     * Get or create the driver list (for a destination under a station).
+     */
+    private List<MatchingDriverCache> getOrCreateDriverList(
+            HashMap<String, List<MatchingDriverCache>> stationMap,
+            String destinationKey) {
+        List<MatchingDriverCache> list = stationMap.get(destinationKey);
+        if (list == null) {
+            list = new ArrayList<>();
+            stationMap.put(destinationKey, list);
+        }
+        return list;
+    }
+
+    /**
+     * Ensure distances map is non-null.
+     */
+    @SuppressWarnings("unchecked")
+    private HashMap<String, HashMap<String, Integer>> ensureDistancesMap() {
+        HashMap<String, HashMap<String, Integer>> distances =
+                (HashMap<String, HashMap<String, Integer>>) redisDistancesHashMap.opsForValue().get(MATCHING_DISTANCE_KEY);
+        if (distances == null) {
+            distances = new HashMap<>();
+        }
+        return distances;
+    }
+
+    /**
+     * Ensure waiting queue is non-null.
+     */
+    @SuppressWarnings("unchecked")
+    private Queue<RiderWaitingQueueCache> ensureWaitingQueue() {
+        Queue<RiderWaitingQueueCache> riderWaitingQueueCache =
+                (Queue<RiderWaitingQueueCache>) redisWaitingQueueTemplate.opsForValue().get(MATCHING_WAITING_QUEUE_KEY);
+        if (riderWaitingQueueCache == null) {
+            riderWaitingQueueCache = new LinkedList<>();
+        }
+        return riderWaitingQueueCache;
+    }
+
+    // -----------------------
+    // Kafka listeners and scheduled job
+    // -----------------------
+
     @KafkaListener(topics = "driver-updates", groupId = "matching-service")
     public void driverInfoUpdateCache(byte[] message, Acknowledgment ack) {
         // Try to acquire lock
@@ -139,18 +215,13 @@ public class MatchingService {
             markProcessed(DRIVER_UPDATE_KAFKA_DEDUP_KEY_PREFIX, messageId);
             ack.acknowledge();
 
-            // Update in Redis cache
-            HashMap<String, HashMap<String, List<MatchingDriverCache>>> allMatchingCache =
-                    (HashMap<String, HashMap<String, List<MatchingDriverCache>>>) redisDriverTemplate.opsForValue().get(MATCHING_DRIVER_CACHE_KEY);
-
-            if (allMatchingCache == null) {
-                allMatchingCache = new HashMap<>();
-            }
+            // Update in Redis cache - ensure top-level map exists
+            HashMap<String, HashMap<String, List<MatchingDriverCache>>> allMatchingCache = ensureAllMatchingCache();
 
             // Remove from old station
-            if (!oldStation.isEmpty()) {
+            if (oldStation != null && !oldStation.isEmpty()) {
                 HashMap<String, List<MatchingDriverCache>> matchingCache = allMatchingCache.get(oldStation);
-                if (matchingCache != null && !finalDestination.isEmpty()) {
+                if (matchingCache != null && finalDestination != null && !finalDestination.isEmpty()) {
                     List<MatchingDriverCache> matchingDriverCacheList = matchingCache.get(finalDestination);
                     if (matchingDriverCacheList != null) {
                         matchingDriverCacheList.removeIf(matchingDriverCache1 -> Objects.equals(matchingDriverCache1.getDriverId(), driverId));
@@ -167,14 +238,17 @@ public class MatchingService {
             }
 
             // Add in new station
-            if (!nextStation.isEmpty() && !finalDestination.isEmpty()) {
+            if (nextStation != null && !nextStation.isEmpty() && finalDestination != null && !finalDestination.isEmpty()) {
+                // ensure station map and list exist
                 HashMap<String, List<MatchingDriverCache>> matchingCache1 = allMatchingCache.get(nextStation);
                 if (matchingCache1 == null) {
                     matchingCache1 = new HashMap<>();
+                    allMatchingCache.put(nextStation, matchingCache1);
                 }
                 List<MatchingDriverCache> matchingDriverCacheList1 = matchingCache1.get(finalDestination);
                 if (matchingDriverCacheList1 == null) {
                     matchingDriverCacheList1 = new ArrayList<>();
+                    matchingCache1.put(finalDestination, matchingDriverCacheList1);
                 }
                 matchingDriverCacheList1.add(MatchingDriverCache.builder()
                         .driverId(driverId)
@@ -233,16 +307,10 @@ public class MatchingService {
             markProcessed(RIDER_REQUEST_KAFKA_DEDUP_KEY_PREFIX, messageId);
             acknowledgment.acknowledge();
 
-            // Load caches from Redis
-            HashMap<String, HashMap<String, List<MatchingDriverCache>>> allMatchingCache =
-                    (HashMap<String, HashMap<String, List<MatchingDriverCache>>>) redisDriverTemplate.opsForValue().get(MATCHING_DRIVER_CACHE_KEY);
+            // Load caches from Redis (ensure initialization)
+            HashMap<String, HashMap<String, List<MatchingDriverCache>>> allMatchingCache = ensureAllMatchingCache();
 
-            if (allMatchingCache == null) {
-                allMatchingCache = new HashMap<>();
-            }
-
-            HashMap<String, HashMap<String, Integer>> distances =
-                    (HashMap<String, HashMap<String, Integer>>) redisDistancesHashMap.opsForValue().get(MATCHING_DISTANCE_KEY);
+            HashMap<String, HashMap<String, Integer>> distances = ensureDistancesMap();
 
             // Candidate pool priority queue ordered by driver's timeToReachStation (smaller first)
             PriorityQueue<MatchingDriverCache> pq = new PriorityQueue<>(Comparator.comparingLong(d ->
@@ -260,7 +328,7 @@ public class MatchingService {
             String chosenDriverStation = null;
             String chosenDriverDestination = null;
 
-            if (!pickUpStation.isEmpty()) {
+            if (pickUpStation != null && !pickUpStation.isEmpty()) {
                 HashMap<String, List<MatchingDriverCache>> stationMap = allMatchingCache.get(pickUpStation);
                 if (stationMap != null && !stationMap.isEmpty()) {
                     // iterate only over driver destination keys in M
@@ -373,18 +441,7 @@ public class MatchingService {
 
             // If no match found, push the rider into the waiting queue (as earlier)
             if (!matched) {
-                Queue<RiderWaitingQueueCache> riderWaitingQueueCache =
-                        (Queue<RiderWaitingQueueCache>) redisWaitingQueueTemplate.opsForValue().get(MATCHING_WAITING_QUEUE_KEY);
-                if (riderWaitingQueueCache == null) {
-                    riderWaitingQueueCache = new LinkedList<>();
-                }
-//                riderWaitingQueueCache.add(RiderWaitingQueueCache.builder()
-//                        .riderId(riderId)
-//                        .arrivalTime(arrivalTime != null ? arrivalTime : Timestamps.fromMillis(System.currentTimeMillis()))
-//                        .destinationPlace(destinationPlace)
-//                        .pickUpStation(pickUpStation)
-//                        .build()
-//                );
+                Queue<RiderWaitingQueueCache> riderWaitingQueueCache = ensureWaitingQueue();
 
                 riderWaitingQueueCache.add(RiderWaitingQueueCache.builder()
                         .riderId(riderId)
@@ -435,19 +492,12 @@ public class MatchingService {
         try {
 
             // Run this CRON job every second to check whether there is a driver for the riders in the waiting queue => pop the first element from the queue
-            // Load caches from Redis
-            HashMap<String, HashMap<String, List<MatchingDriverCache>>> allMatchingCache =
-                    (HashMap<String, HashMap<String, List<MatchingDriverCache>>>) redisDriverTemplate.opsForValue().get(MATCHING_DRIVER_CACHE_KEY);
+            // Load caches from Redis (ensure initialization)
+            HashMap<String, HashMap<String, List<MatchingDriverCache>>> allMatchingCache = ensureAllMatchingCache();
 
-            if (allMatchingCache == null) {
-                allMatchingCache = new HashMap<>();
-            }
+            HashMap<String, HashMap<String, Integer>> distances = ensureDistancesMap();
 
-            HashMap<String, HashMap<String, Integer>> distances =
-                    (HashMap<String, HashMap<String, Integer>>) redisDistancesHashMap.opsForValue().get(MATCHING_DISTANCE_KEY);
-
-            Queue<RiderWaitingQueueCache> riderWaitingQueueCache =
-                    (Queue<RiderWaitingQueueCache>) redisWaitingQueueTemplate.opsForValue().get(MATCHING_WAITING_QUEUE_KEY);
+            Queue<RiderWaitingQueueCache> riderWaitingQueueCache = ensureWaitingQueue();
 
             if (riderWaitingQueueCache == null || riderWaitingQueueCache.isEmpty()) {
                 // nothing to do in this cron tick

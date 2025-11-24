@@ -15,11 +15,17 @@ import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
 import org.springframework.kafka.support.Acknowledgment;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * TripService with safe initialization of caches read from Redis.
+ * Only null-checks and initializations were added. Logic unchanged.
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -48,7 +54,7 @@ public class TripService {
     private static final String RIDER_DRIVER_MATCH_KAFKA_DEDUP_KEY_PREFIX = "rider_driver_match_processed_kafka_msg:";
     private static final String TRIP_COMPLETED_KAFKA_DEDUP_KEY_PREFIX = "trip_completed_processed_kafka_msg:";
     private static final String DRIVER_UPDATES_KAFKA_DEDUP_KEY_PREFIX = "driver_updates_processed_kafka_msg:";
-    private static final String DRIVER_LOCATION_RIDER_KAFKA_DEDUP_KEY_PREFIX = "driver_location_rider_processed_kafka_msg:";
+//    private static final String DRIVER_LOCATION_RIDER_KAFKA_DEDUP_KEY_PREFIX = "driver_location_rider_processed_kafka_msg:";
 
     private boolean alreadyProcessed(String topicDedupKey, String messageId) {
         if (messageId == null) return false;
@@ -87,6 +93,25 @@ public class TripService {
         return null; // all retries failed
     }
 
+    /**
+     * Helper: load trip-cache from Redis, initialize if missing, and persist back.
+     * Ensures top-level map exists.
+     */
+    @SuppressWarnings("unchecked")
+    private Map<Long, List<TripCache>> loadOrInitTripCache() {
+        Map<Long, List<TripCache>> allTripCacheData =
+                (Map<Long, List<TripCache>>) redisTemplate.opsForValue().get(TRIP_CACHE_KEY);
+
+        if (allTripCacheData == null) {
+            allTripCacheData = new HashMap<>();
+            // persist empty map so key exists in Redis
+            redisTemplate.opsForValue().set(TRIP_CACHE_KEY, allTripCacheData);
+            log.debug("Initialized empty trip-cache in Redis (key={})", TRIP_CACHE_KEY);
+        }
+
+        return allTripCacheData;
+    }
+
     @KafkaListener(topics = "rider-driver-match", groupId = "trip-service")
     public void matchFound(byte[] message, Acknowledgment acknowledgment) {
         // Try to acquire lock
@@ -123,9 +148,16 @@ public class TripService {
             acknowledgment.acknowledge();
 
             // Update the cache => push this pair {riderId, pickUpStation} in the list associated with key == driverId
-            Map<Long, List<TripCache>> allTripCacheData = (Map<Long, List<TripCache>>) redisTemplate.opsForValue().get(TRIP_CACHE_KEY);
-            assert allTripCacheData != null;
-            allTripCacheData.get(driverId).add(TripCache.builder()
+            Map<Long, List<TripCache>> allTripCacheData = loadOrInitTripCache();
+
+            // Ensure list exists for driverId
+            List<TripCache> driverList = allTripCacheData.get(driverId);
+            if (driverList == null) {
+                driverList = new ArrayList<>();
+                allTripCacheData.put(driverId, driverList);
+            }
+
+            driverList.add(TripCache.builder()
                     .riderId(riderId)
                     .pickUpStation(pickUpStation)
                     .build()
@@ -133,6 +165,7 @@ public class TripService {
 
             log.info("Trip: Rider = {} is now travelling with Driver = {}", riderId, driverId);
 
+            // persist updated map
             redisTemplate.opsForValue().set(TRIP_CACHE_KEY, allTripCacheData);
         } catch (InvalidProtocolBufferException e){
             log.error("Failed to parse DriverRiderMatchEvent message: {}", e.getMessage());
@@ -172,7 +205,8 @@ public class TripService {
             markProcessed(TRIP_COMPLETED_KAFKA_DEDUP_KEY_PREFIX, messageId);
             acknowledgment.acknowledge();
 
-            // Retrieve the trip cache from Redis
+            // Retrieve the trip cache from Redis (initialization not forced here because completion implies data may or may not exist)
+            @SuppressWarnings("unchecked")
             Map<Long, List<TripCache>> allTripCacheData =
                     (Map<Long, List<TripCache>>) redisTemplate.opsForValue().get(TRIP_CACHE_KEY);
 
@@ -273,6 +307,7 @@ public class TripService {
             acknowledgment.acknowledge();
 
             // Send driver location to all associated riders
+            @SuppressWarnings("unchecked")
             Map<Long, List<TripCache>> allTripCacheData =
                     (Map<Long, List<TripCache>>) redisTemplate.opsForValue().get(TRIP_CACHE_KEY);
             if (allTripCacheData == null || !allTripCacheData.containsKey(driverId)) {
@@ -282,9 +317,10 @@ public class TripService {
             List<TripCache> riderList = allTripCacheData.get(driverId);
             if (riderList == null || riderList.isEmpty()) {
                 allTripCacheData.remove(driverId);
+                redisTemplate.opsForValue().set(TRIP_CACHE_KEY, allTripCacheData);
+                return;
             }
 
-            assert riderList != null;
             for (TripCache riderTrip : riderList) {
                 DriverLocationForRiderEvent event = DriverLocationForRiderEvent.newBuilder()
                         .setDriverId(driverId)
