@@ -135,7 +135,7 @@ public class DriverService {
         }
     }
 
-    @KafkaListener(topics = "rider-driver-match", groupId = "matching-service")
+    @KafkaListener(topics = "${kafka.topics.rider-driver-match}", groupId = "${spring.kafka.consumer.group-id}")
     public void matchFoundUpdateCache(byte[] message,
                                       Acknowledgment acknowledgment) {
         // Try to acquire lock

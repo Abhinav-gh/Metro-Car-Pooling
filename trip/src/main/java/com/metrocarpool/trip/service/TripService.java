@@ -112,7 +112,7 @@ public class TripService {
         return allTripCacheData;
     }
 
-    @KafkaListener(topics = "rider-driver-match", groupId = "trip-service")
+    @KafkaListener(topics = "${kafka.topics.rider-driver-match}", groupId = "${spring.kafka.consumer.group-id}")
     public void matchFound(byte[] message, Acknowledgment acknowledgment) {
         // Try to acquire lock
         String lockValue = tryAcquireLockWithRetry(redisTripLockKey);
@@ -174,7 +174,7 @@ public class TripService {
         }
     }
 
-    @KafkaListener(topics = "trip-completed", groupId = "trip-service")
+    @KafkaListener(topics = "${kafka.topics.ride-completion-topic}", groupId = "${spring.kafka.consumer.group-id}")
     public void tripCompleted(byte[] message, Acknowledgment acknowledgment) {
         // Try to acquire lock
         String lockValue = tryAcquireLockWithRetry(redisTripLockKey);
@@ -272,7 +272,7 @@ public class TripService {
         }
     }
 
-    @KafkaListener(topics = "driver-updates", groupId = "trip-service")
+    @KafkaListener(topics = "${kafka.topics.driver-location-topic}", groupId = "${spring.kafka.consumer.group-id}")
     public void driverLocationUpdates(byte[] message, Acknowledgment acknowledgment) {
         // Try to acquire lock
         String lockValue = tryAcquireLockWithRetry(redisTripLockKey);

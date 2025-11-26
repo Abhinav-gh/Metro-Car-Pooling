@@ -46,6 +46,7 @@ kafka:
   topics:
     rider-driver-match: "rider-driver-match"
     driver-location-topic: "driver-updates"
+    rider-requests: "rider-requests"
 
 eureka:
   client:

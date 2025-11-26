@@ -283,7 +283,7 @@ public class MatchingService {
         }
     }
 
-    @KafkaListener(topics = "rider-requests", groupId = "${spring.kafka.consumer.group-id}")
+    @KafkaListener(topics = "${kafka.topics.rider-requests}", groupId = "${spring.kafka.consumer.group-id}")
     public void riderInfoDriverMatchingAlgorithm(byte[] message,
                                                  Acknowledgment acknowledgment) {
         // Try to acquire lock
